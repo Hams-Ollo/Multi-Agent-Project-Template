@@ -5,7 +5,7 @@
 # Version: 0.0.3
 # Last Updated: [2024-11-21]
 #-------------------------------------------------------------------------------------#
-# SETUP GUIDE:  streamlit run .\frontend\Chat.py 
+# SETUP GUIDE:  streamlit run Chat.py 
 #
 # Initial Setup:
 # 1. Create virtual environment  -> python -m venv venv
