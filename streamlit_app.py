@@ -13,15 +13,14 @@ st.set_page_config(
     page_icon="🤖",
     layout="wide",
     initial_sidebar_state="expanded",
-    sidebar_title="💬 AI Chat Assistant"
 )
 
 # Add the project root to the Python path
 project_root = Path(__file__).parent
 sys.path.append(str(project_root))
 
-# Import the main frontend components
-from frontend.Chat import main as chat_main
+# Import after st.set_page_config
+from frontend.Chat import display_chat_interface
 
 def init_session_state():
     """Initialize session state variables."""
@@ -34,9 +33,12 @@ def main():
     """Main function to run the Streamlit application."""
     # Initialize session state
     init_session_state()
+    
+    # Set the app title in sidebar
+    st.sidebar.markdown("# 💬 AI Chat Assistant")
 
-    # Run the main chat interface
-    chat_main()
+    # Display the chat interface
+    display_chat_interface()
 
 if __name__ == "__main__":
     main()
