@@ -4,8 +4,12 @@ Main entry point for Streamlit Cloud deployment
 import os
 import sys
 from pathlib import Path
+import logging
 
 import streamlit as st
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
 
 # Set page configuration at the very beginning
 st.set_page_config(
@@ -20,6 +24,7 @@ project_root = Path(__file__).parent
 sys.path.append(str(project_root))
 
 # Import after st.set_page_config
+from app.core.sqlite_setup import setup_sqlite
 from frontend.Chat import display_chat_interface
 
 def init_session_state():
@@ -31,6 +36,9 @@ def init_session_state():
 
 def main():
     """Main function to run the Streamlit application."""
+    # Initialize SQLite for ChromaDB
+    setup_sqlite()
+    
     # Initialize session state
     init_session_state()
     

@@ -5,8 +5,10 @@ from typing import Dict, List, Optional, Any
 import uuid
 from datetime import datetime
 import logging
+import tempfile
 from pathlib import Path
 
+import chromadb
 from langchain_community.document_loaders import (
     PyPDFLoader,
     TextLoader,
@@ -27,12 +29,26 @@ class DocumentProcessor:
             model_name="all-MiniLM-L6-v2"
         )
         
-        # Initialize vector store
-        self.vector_store = Chroma(
-            collection_name="uploaded_documents",
-            embedding_function=self.embeddings,
-            persist_directory=str(Path("data/documents"))
-        )
+        # Use temporary directory for Chroma
+        self.temp_dir = tempfile.mkdtemp()
+        
+        try:
+            # Initialize ChromaDB client with in-memory settings
+            client = chromadb.Client(settings=chromadb.Settings(
+                is_persistent=False,  # Use in-memory mode
+                allow_reset=True
+            ))
+            
+            # Initialize vector store
+            self.vector_store = Chroma(
+                client=client,
+                collection_name="uploaded_documents",
+                embedding_function=self.embeddings
+            )
+        except Exception as e:
+            logging.error(f"Failed to initialize ChromaDB: {str(e)}")
+            # Fallback to simple list-based storage if ChromaDB fails
+            self.vector_store = None
         
         # Configure text splitter
         self.text_splitter = RecursiveCharacterTextSplitter(
@@ -41,8 +57,8 @@ class DocumentProcessor:
             length_function=len,
         )
         
-        # Document metadata storage
-        self.documents_path = Path("data/documents/metadata")
+        # Use temporary directory for document metadata
+        self.documents_path = Path(self.temp_dir) / "metadata"
         self.documents_path.mkdir(parents=True, exist_ok=True)
         
         self._load_document_metadata()
@@ -88,7 +104,8 @@ class DocumentProcessor:
                 })
             
             # Store in vector database
-            self.vector_store.add_documents(chunks)
+            if self.vector_store:
+                self.vector_store.add_documents(chunks)
             
             # Store document metadata
             self.documents[doc_id] = {
@@ -123,16 +140,19 @@ class DocumentProcessor:
     def get_relevant_chunks(self, query: str, num_chunks: int = 5) -> List[Dict[str, Any]]:
         """Retrieve relevant document chunks for a query."""
         try:
-            results = self.vector_store.similarity_search_with_score(
-                query,
-                k=num_chunks
-            )
-            
-            return [{
-                'content': doc.page_content,
-                'metadata': doc.metadata,
-                'score': score
-            } for doc, score in results]
+            if self.vector_store:
+                results = self.vector_store.similarity_search_with_score(
+                    query,
+                    k=num_chunks
+                )
+                
+                return [{
+                    'content': doc.page_content,
+                    'metadata': doc.metadata,
+                    'score': score
+                } for doc, score in results]
+            else:
+                return []
             
         except Exception as e:
             logging.error(f"Error retrieving chunks for query: {str(e)}")
@@ -145,10 +165,11 @@ class DocumentProcessor:
     def delete_document(self, doc_id: str):
         """Delete a document and its chunks from storage."""
         try:
-            # Delete from vector store
-            self.vector_store.delete(
-                where={"document_id": doc_id}
-            )
+            if self.vector_store:
+                # Delete from vector store
+                self.vector_store.delete(
+                    where={"document_id": doc_id}
+                )
             
             # Delete metadata
             if doc_id in self.documents:
@@ -162,8 +183,9 @@ class DocumentProcessor:
     def clear_all_documents(self):
         """Clear all documents and reset storage."""
         try:
-            # Clear vector store
-            self.vector_store.delete(where={})
+            if self.vector_store:
+                # Clear vector store
+                self.vector_store.delete(where={})
             
             # Clear metadata
             self.documents = {}

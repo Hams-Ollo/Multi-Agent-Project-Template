@@ -18,9 +18,10 @@ redis-om>=0.2.1
 tiktoken>=0.6.0
 
 # Vector Store and Embeddings
-chromadb>=0.4.24,<0.5.0
+chromadb>=0.4.24
 hnswlib>=0.7.0
 faiss-cpu>=1.7.4
+pysqlite3-binary>=0.5.2
 
 # Document Processing
 unstructured>=0.12.4
